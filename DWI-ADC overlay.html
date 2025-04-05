@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DWI - ADC Overlay 뷰어</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .folder-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .image-pair {
+            position: relative;
+            width: 300px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .image-overlay {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+        .dwi-image, .adc-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .controls {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .image-info {
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        .slider-container label {
+            margin-right: 10px;
+            min-width: 120px;
+        }
+        input[type="range"] {
+            flex-grow: 1;
+        }
+        .no-images {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 100px;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 100px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>DWI - ADC Overlay 뷰어</h1>
+    </div>
+    
+    <div class="folder-selector">
+        <label for="folder-input">이미지 폴더 선택: </label>
+        <input type="file" id="folder-input" webkitdirectory directory multiple>
+    </div>
+    
+    <div id="loading" class="loading" style="display: none;">
+        이미지를 로딩 중입니다...
+    </div>
+    
+    <div id="no-images" class="no-images" style="display: none;">
+        선택한 폴더에서 ADC 또는 DWI 이미지를 찾을 수 없습니다.
+    </div>
+    
+    <div id="image-container" class="image-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const folderInput = document.getElementById('folder-input');
+            const imageContainer = document.getElementById('image-container');
+            const loadingElement = document.getElementById('loading');
+            const noImagesElement = document.getElementById('no-images');
+            
+            folderInput.addEventListener('change', handleFolderSelect);
+            
+            function handleFolderSelect(event) {
+                // 이전 이미지 지우기
+                imageContainer.innerHTML = '';
+                
+                // 로딩 표시 보이기
+                loadingElement.style.display = 'block';
+                noImagesElement.style.display = 'none';
+                
+                const files = event.target.files;
+                
+                // ADC와 DWI 이미지 필터링
+                const adcImages = Array.from(files).filter(file => 
+                    file.name.startsWith('ADC') && file.name.toLowerCase().endsWith('.jpg')
+                );
+                
+                const dwiImages = Array.from(files).filter(file => 
+                    file.name.startsWith('DWI') && file.name.toLowerCase().endsWith('.jpg')
+                );
+                
+                // 이미지가 없는 경우
+                if (adcImages.length === 0 || dwiImages.length === 0) {
+                    loadingElement.style.display = 'none';
+                    noImagesElement.style.display = 'block';
+                    return;
+                }
+                
+                // 이미지 번호 추출 함수
+                function extractNumber(filename) {
+                    const match = filename.match(/\d+/);
+                    return match ? parseInt(match[0]) : 0;
+                }
+                
+                // 번호로 정렬
+                adcImages.sort((a, b) => extractNumber(a.name) - extractNumber(b.name));
+                dwiImages.sort((a, b) => extractNumber(a.name) - extractNumber(b.name));
+                
+                // 동일한 번호의 이미지 쌍 찾기
+                const imagePairs = [];
+                
+                adcImages.forEach(adcImage => {
+                    const adcNumber = extractNumber(adcImage.name);
+                    
+                    // 동일한 번호의 DWI 이미지 찾기
+                    const matchingDwiImage = dwiImages.find(dwiImage => 
+                        extractNumber(dwiImage.name) === adcNumber
+                    );
+                    
+                    if (matchingDwiImage) {
+                        imagePairs.push({
+                            adc: adcImage,
+                            dwi: matchingDwiImage,
+                            number: adcNumber
+                        });
+                    }
+                });
+                
+                // 번호 순서대로 정렬
+                imagePairs.sort((a, b) => a.number - b.number);
+                
+                // 화면에 이미지 쌍 표시
+                Promise.all(imagePairs.map(createImagePairElement))
+                    .then(() => {
+                        loadingElement.style.display = 'none';
+                        if (imagePairs.length === 0) {
+                            noImagesElement.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('이미지 로드 중 오류 발생:', error);
+                        loadingElement.style.display = 'none';
+                    });
+            }
+            
+            function createImagePairElement(pair) {
+                return new Promise((resolve) => {
+                    const pairElement = document.createElement('div');
+                    pairElement.className = 'image-pair';
+                    
+                    const overlayContainer = document.createElement('div');
+                    overlayContainer.className = 'image-overlay';
+                    
+                    // DWI 이미지 (밑에 깔리는 이미지)
+                    const dwiImageElement = document.createElement('img');
+                    dwiImageElement.className = 'dwi-image';
+                    dwiImageElement.alt = `DWI ${pair.number}`;
+                    
+                    // ADC 이미지 (위에 오버레이되는 이미지)
+                    const adcImageElement = document.createElement('img');
+                    adcImageElement.className = 'adc-image';
+                    adcImageElement.alt = `ADC ${pair.number}`;
+                    adcImageElement.style.opacity = '0'; // 초기 opacity 0%로 설정 (DWI만 보임)
+                    
+                    // 컨트롤 컨테이너
+                    const controlsElement = document.createElement('div');
+                    controlsElement.className = 'controls';
+                    
+                    // 이미지 정보
+                    const infoElement = document.createElement('div');
+                    infoElement.className = 'image-info';
+                    infoElement.textContent = `이미지 #${pair.number}`;
+                    
+                    // 슬라이더 컨테이너
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'slider-container';
+                    
+                    // 슬라이더 라벨
+                    const sliderLabel = document.createElement('label');
+                    sliderLabel.setAttribute('for', `opacity-slider-${pair.number}`);
+                    sliderLabel.textContent = 'ADC 투명도:';
+                    
+                    // 슬라이더
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.id = `opacity-slider-${pair.number}`;
+                    slider.min = '0';
+                    slider.max = '1';
+                    slider.step = '0.01';
+                    slider.value = '0'; // 초기값을 0으로 설정 (DWI만 보임)
+                    
+                    slider.addEventListener('input', function() {
+                        adcImageElement.style.opacity = this.value;
+                    });
+                    
+                    // 요소들 조립
+                    sliderContainer.appendChild(sliderLabel);
+                    sliderContainer.appendChild(slider);
+                    
+                    controlsElement.appendChild(infoElement);
+                    controlsElement.appendChild(sliderContainer);
+                    
+                    overlayContainer.appendChild(dwiImageElement);
+                    overlayContainer.appendChild(adcImageElement);
+                    
+                    pairElement.appendChild(overlayContainer);
+                    pairElement.appendChild(controlsElement);
+                    
+                    imageContainer.appendChild(pairElement);
+                    
+                    // DWI 이미지 로드
+                    const dwiFileReader = new FileReader();
+                    dwiFileReader.onload = function(e) {
+                        dwiImageElement.src = e.target.result;
+                        
+                        // ADC 이미지 로드
+                        const adcFileReader = new FileReader();
+                        adcFileReader.onload = function(e) {
+                            adcImageElement.src = e.target.result;
+                            resolve();
+                        };
+                        adcFileReader.onerror = function() {
+                            console.error('ADC 이미지 로드 실패:', pair.adc.name);
+                            resolve();
+                        };
+                        adcFileReader.readAsDataURL(pair.adc);
+                    };
+                    dwiFileReader.onerror = function() {
+                        console.error('DWI 이미지 로드 실패:', pair.dwi.name);
+                        resolve();
+                    };
+                    dwiFileReader.readAsDataURL(pair.dwi);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
