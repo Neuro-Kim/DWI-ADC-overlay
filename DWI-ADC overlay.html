@@ -7,491 +7,638 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px 20px 20px 20px;
+            margin: 0;
+            padding: 20px;
             background-color: #f5f5f5;
         }
-        .main-content {
-            padding-right: 280px; /* 전역 설정 패널 공간 확보 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
         .header {
             text-align: center;
             margin-bottom: 20px;
         }
-        .folder-selector {
-            margin-bottom: 20px;
+        .file-input-container {
             text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .image-container {
+        .images-container {
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
             gap: 20px;
+            justify-content: center;
         }
-        .image-pair {
+        .image-card {
             position: relative;
-            width: 300px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            background-color: white;
-            padding: 10px;
+            width: 280px;
+            background-color: #fff;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 10px;
         }
-        .image-overlay {
-            position: relative;
+        .canvas-container {
             width: 100%;
-            height: 300px;
+            height: 260px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 10px;
         }
-        .dwi-image, .adc-image {
-            position: absolute;
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .file-name {
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .slider-container {
+            padding: 0 10px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .loading {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        .controls {
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .no-images {
+            text-align: center;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .contour-control {
             margin-top: 10px;
-            padding: 10px;
+            padding: 8px;
             background-color: #f0f0f0;
             border-radius: 4px;
-        }
-        .image-info {
-            margin-bottom: 5px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .slider-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 5px;
-        }
-        .slider-container label {
-            margin-right: 10px;
-            min-width: 120px;
-        }
-        input[type="range"] {
-            flex-grow: 1;
-            width: 100%;
         }
         .reset-button {
             background-color: #f44336;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 5px 10px;
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 14px;
-            margin: 4px 2px;
+            font-size: 12px;
+            margin-top: 10px;
             cursor: pointer;
             border-radius: 4px;
-        }
-        #opacity-value {
-            display: inline-block;
-            width: 40px;
-            text-align: right;
-            margin-left: 5px;
-        }
-        .no-images {
-            text-align: center;
-            font-size: 18px;
-            margin-top: 100px;
-            color: #666;
-        }
-        .loading {
-            text-align: center;
-            font-size: 18px;
-            margin-top: 100px;
-            color: #666;
-        }
-        .blend-mode-container {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-        .blend-mode-container label {
-            margin-right: 10px;
-            min-width: 120px;
-        }
-        select {
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            width: 100%;
         }
         .global-controls {
-            background-color: #e0e0e0;
+            background-color: #fff;
             padding: 15px;
             border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             text-align: center;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 250px;
-            z-index: 1000;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        .global-controls h2 {
-            margin-top: 0;
-            font-size: 18px;
-            margin-bottom: 15px;
         }
         .global-control-item {
-            display: block;
             margin: 15px 0;
         }
     </style>
 </head>
 <body>
-    <div class="main-content">
+    <div class="container">
         <div class="header">
             <h1>의료 이미지 오버레이 뷰어</h1>
         </div>
         
-        <div class="folder-selector">
-            <label for="folder-input">이미지 폴더 선택: </label>
-            <input type="file" id="folder-input" webkitdirectory directory multiple>
+        <div class="file-input-container">
+            <p>이미지가 들어있는 폴더를 선택해주세요. ADC*.jpg와 DWI*.jpg 파일을 찾아 표시합니다.</p>
+            <input type="file" id="folderSelector" webkitdirectory directory multiple>
+        </div>
+
+        <div id="globalControls" class="global-controls" style="display: none;">
+            <h3>전역 설정</h3>
+            <div class="global-control-item">
+                <label for="globalThreshold">전체 밝기 임계값: </label>
+                <input type="range" id="globalThreshold" min="50" max="240" value="150" oninput="updateAllThresholds(this.value)">
+                <span id="thresholdValue">150</span>
+            </div>
+            <div class="global-control-item">
+                <label for="globalContour">전체 컨투어 표시: </label>
+                <input type="checkbox" id="globalContour" checked onchange="toggleAllContours(this.checked)">
+            </div>
+            <div class="global-control-item">
+                <button onclick="resetAllSettings()" class="reset-button">모든 설정 초기화</button>
+            </div>
         </div>
         
-        <div id="loading" class="loading" style="display: none;">
-            이미지를 로딩 중입니다...
+        <div id="imagesContainer" class="images-container">
+            <div class="no-images">폴더를 선택하면 이미지가 여기에 표시됩니다.</div>
         </div>
-        
-        <div id="no-images" class="no-images" style="display: none;">
-            선택한 폴더에서 ADC 또는 DWI 이미지를 찾을 수 없습니다.
-        </div>
-        
-        <div id="image-container" class="image-container"></div>
     </div>
 
-    <div class="global-controls" id="global-controls" style="display: none;">
-        <h2>전역 설정</h2>
-        <div class="global-control-item">
-            <label for="global-blend-mode">오버레이 방식: </label>
-            <select id="global-blend-mode" onchange="updateAllBlendModes(this.value)">
-                <option value="normal">Normal</option>
-                <option value="multiply">Multiply</option>
-                <option value="screen">Screen</option>
-                <option value="overlay">Overlay</option>
-                <option value="darken">Darken</option>
-                <option value="lighten">Lighten</option>
-                <option value="color-dodge">Color Dodge</option>
-                <option value="color-burn">Color Burn</option>
-                <option value="hard-light">Hard Light</option>
-                <option value="soft-light">Soft Light</option>
-                <option value="difference">Difference</option>
-                <option value="exclusion">Exclusion</option>
-                <option value="hue">Hue</option>
-                <option value="saturation">Saturation</option>
-                <option value="color">Color</option>
-                <option value="luminosity">Luminosity</option>
-            </select>
-        </div>
-        <div class="global-control-item">
-            <label for="global-opacity">전체 투명도: </label>
-            <input type="range" id="global-opacity" min="0" max="1" step="0.01" value="0" oninput="updateAllOpacity(this.value)">
-            <span id="opacity-value">0%</span>
-        </div>
-        <div class="global-control-item">
-            <button onclick="resetAllSettings()" class="reset-button">설정 초기화</button>
-        </div>
+    <div id="loading" class="loading" style="display:none;">
+        <div class="loading-spinner"></div>
     </div>
 
     <script>
+        // 전역 변수 정의
+        let dwImages = [];
+        let adcImages = [];
+        let imageData = [];
+
+        // 페이지 로드 시 이벤트 리스너 설정
         document.addEventListener('DOMContentLoaded', function() {
-            const folderInput = document.getElementById('folder-input');
-            const imageContainer = document.getElementById('image-container');
-            const loadingElement = document.getElementById('loading');
-            const noImagesElement = document.getElementById('no-images');
-            const globalControlsElement = document.getElementById('global-controls');
-            
-            folderInput.addEventListener('change', handleFolderSelect);
-            
-            // 모든 이미지 오버레이 방식 업데이트
-            window.updateAllBlendModes = function(blendMode) {
-                const adcImages = document.querySelectorAll('.adc-image');
-                const blendModeSelects = document.querySelectorAll('.blend-mode-select');
-                
-                adcImages.forEach(img => {
-                    img.style.mixBlendMode = blendMode;
-                });
-                
-                blendModeSelects.forEach(select => {
-                    select.value = blendMode;
-                });
-            };
-            
-            // 모든 이미지 투명도 업데이트
-            window.updateAllOpacity = function(opacity) {
-                const adcImages = document.querySelectorAll('.adc-image');
-                const opacitySliders = document.querySelectorAll('.opacity-slider');
-                const opacityValue = document.getElementById('opacity-value');
-                
-                adcImages.forEach(img => {
-                    img.style.opacity = opacity;
-                });
-                
-                opacitySliders.forEach(slider => {
-                    slider.value = opacity;
-                });
-                
-                // 퍼센트 표시 업데이트
-                opacityValue.textContent = Math.round(opacity * 100) + '%';
-            };
-            
-            // 모든 설정 초기화
-            window.resetAllSettings = function() {
-                const adcImages = document.querySelectorAll('.adc-image');
-                const opacitySliders = document.querySelectorAll('.opacity-slider');
-                const blendModeSelects = document.querySelectorAll('.blend-mode-select');
-                const globalOpacitySlider = document.getElementById('global-opacity');
-                const globalBlendMode = document.getElementById('global-blend-mode');
-                const opacityValue = document.getElementById('opacity-value');
-                
-                // 이미지 초기화
-                adcImages.forEach(img => {
-                    img.style.opacity = '0';
-                    img.style.mixBlendMode = 'normal';
-                });
-                
-                // 개별 슬라이더 초기화
-                opacitySliders.forEach(slider => {
-                    slider.value = '0';
-                });
-                
-                // 개별 블렌드 모드 초기화
-                blendModeSelects.forEach(select => {
-                    select.value = 'normal';
-                });
-                
-                // 전역 컨트롤 초기화
-                globalOpacitySlider.value = '0';
-                globalBlendMode.value = 'normal';
-                opacityValue.textContent = '0%';
-            };
-            
-            function handleFolderSelect(event) {
-                // 이전 이미지 지우기
-                imageContainer.innerHTML = '';
-                
-                // 로딩 표시 보이기
-                loadingElement.style.display = 'block';
-                noImagesElement.style.display = 'none';
-                globalControlsElement.style.display = 'none';
-                
-                const files = event.target.files;
-                
-                // ADC와 DWI 이미지 필터링
-                const adcImages = Array.from(files).filter(file => 
-                    file.name.startsWith('ADC') && file.name.toLowerCase().endsWith('.jpg')
-                );
-                
-                const dwiImages = Array.from(files).filter(file => 
-                    file.name.startsWith('DWI') && file.name.toLowerCase().endsWith('.jpg')
-                );
-                
-                // 이미지가 없는 경우
-                if (adcImages.length === 0 || dwiImages.length === 0) {
-                    loadingElement.style.display = 'none';
-                    noImagesElement.style.display = 'block';
-                    return;
-                }
-                
-                // 이미지 번호 추출 함수
-                function extractNumber(filename) {
-                    const match = filename.match(/\d+/);
-                    return match ? parseInt(match[0]) : 0;
-                }
-                
-                // 번호로 정렬
-                adcImages.sort((a, b) => extractNumber(a.name) - extractNumber(b.name));
-                dwiImages.sort((a, b) => extractNumber(a.name) - extractNumber(b.name));
-                
-                // 동일한 번호의 이미지 쌍 찾기
-                const imagePairs = [];
-                
-                adcImages.forEach(adcImage => {
-                    const adcNumber = extractNumber(adcImage.name);
-                    
-                    // 동일한 번호의 DWI 이미지 찾기
-                    const matchingDwiImage = dwiImages.find(dwiImage => 
-                        extractNumber(dwiImage.name) === adcNumber
-                    );
-                    
-                    if (matchingDwiImage) {
-                        imagePairs.push({
-                            adc: adcImage,
-                            dwi: matchingDwiImage,
-                            number: adcNumber
-                        });
-                    }
-                });
-                
-                // 번호 순서대로 정렬
-                imagePairs.sort((a, b) => a.number - b.number);
-                
-                // 이미지 쌍이 있으면 전역 컨트롤 표시
-                if (imagePairs.length > 0) {
-                    globalControlsElement.style.display = 'block';
-                }
-                
-                // 화면에 이미지 쌍 표시
-                Promise.all(imagePairs.map(createImagePairElement))
-                    .then(() => {
-                        loadingElement.style.display = 'none';
-                        if (imagePairs.length === 0) {
-                            noImagesElement.style.display = 'block';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('이미지 로드 중 오류 발생:', error);
-                        loadingElement.style.display = 'none';
-                    });
-            }
-            
-            function createImagePairElement(pair) {
-                return new Promise((resolve) => {
-                    const pairElement = document.createElement('div');
-                    pairElement.className = 'image-pair';
-                    
-                    const overlayContainer = document.createElement('div');
-                    overlayContainer.className = 'image-overlay';
-                    
-                    // DWI 이미지 (밑에 깔리는 이미지)
-                    const dwiImageElement = document.createElement('img');
-                    dwiImageElement.className = 'dwi-image';
-                    dwiImageElement.alt = `DWI ${pair.number}`;
-                    
-                    // ADC 이미지 (위에 오버레이되는 이미지)
-                    const adcImageElement = document.createElement('img');
-                    adcImageElement.className = 'adc-image';
-                    adcImageElement.alt = `ADC ${pair.number}`;
-                    adcImageElement.style.opacity = '0'; // 초기 opacity 0%로 설정 (DWI만 보임)
-                    adcImageElement.style.mixBlendMode = 'normal'; // 기본 블렌드 모드
-                    
-                    // 컨트롤 컨테이너
-                    const controlsElement = document.createElement('div');
-                    controlsElement.className = 'controls';
-                    
-                    // 이미지 정보
-                    const infoElement = document.createElement('div');
-                    infoElement.className = 'image-info';
-                    infoElement.textContent = `이미지 #${pair.number}`;
-                    
-                    // 슬라이더 컨테이너
-                    const sliderContainer = document.createElement('div');
-                    sliderContainer.className = 'slider-container';
-                    
-                    // 슬라이더 라벨
-                    const sliderLabel = document.createElement('label');
-                    sliderLabel.setAttribute('for', `opacity-slider-${pair.number}`);
-                    sliderLabel.textContent = 'ADC 투명도:';
-                    
-                    // 슬라이더
-                    const slider = document.createElement('input');
-                    slider.type = 'range';
-                    slider.id = `opacity-slider-${pair.number}`;
-                    slider.className = 'opacity-slider';
-                    slider.min = '0';
-                    slider.max = '1';
-                    slider.step = '0.01';
-                    slider.value = '0'; // 초기값을 0으로 설정 (DWI만 보임)
-                    
-                    slider.addEventListener('input', function() {
-                        adcImageElement.style.opacity = this.value;
-                    });
-                    
-                    // 블렌드 모드 컨테이너
-                    const blendModeContainer = document.createElement('div');
-                    blendModeContainer.className = 'blend-mode-container';
-                    
-                    // 블렌드 모드 라벨
-                    const blendModeLabel = document.createElement('label');
-                    blendModeLabel.setAttribute('for', `blend-mode-${pair.number}`);
-                    blendModeLabel.textContent = '오버레이 방식:';
-                    
-                    // 블렌드 모드 선택 상자
-                    const blendModeSelect = document.createElement('select');
-                    blendModeSelect.id = `blend-mode-${pair.number}`;
-                    blendModeSelect.className = 'blend-mode-select';
-                    
-                    // 블렌드 모드 옵션들
-                    const blendModes = [
-                        { value: 'normal', text: 'Normal' },
-                        { value: 'multiply', text: 'Multiply' },
-                        { value: 'screen', text: 'Screen' },
-                        { value: 'overlay', text: 'Overlay' },
-                        { value: 'darken', text: 'Darken' },
-                        { value: 'lighten', text: 'Lighten' },
-                        { value: 'color-dodge', text: 'Color Dodge' },
-                        { value: 'color-burn', text: 'Color Burn' },
-                        { value: 'hard-light', text: 'Hard Light' },
-                        { value: 'soft-light', text: 'Soft Light' },
-                        { value: 'difference', text: 'Difference' },
-                        { value: 'exclusion', text: 'Exclusion' },
-                        { value: 'hue', text: 'Hue' },
-                        { value: 'saturation', text: 'Saturation' },
-                        { value: 'color', text: 'Color' },
-                        { value: 'luminosity', text: 'Luminosity' }
-                    ];
-                    
-                    blendModes.forEach(mode => {
-                        const option = document.createElement('option');
-                        option.value = mode.value;
-                        option.textContent = mode.text;
-                        blendModeSelect.appendChild(option);
-                    });
-                    
-                    blendModeSelect.addEventListener('change', function() {
-                        adcImageElement.style.mixBlendMode = this.value;
-                    });
-                    
-                    // 요소들 조립
-                    sliderContainer.appendChild(sliderLabel);
-                    sliderContainer.appendChild(slider);
-                    
-                    blendModeContainer.appendChild(blendModeLabel);
-                    blendModeContainer.appendChild(blendModeSelect);
-                    
-                    controlsElement.appendChild(infoElement);
-                    controlsElement.appendChild(sliderContainer);
-                    controlsElement.appendChild(blendModeContainer);
-                    
-                    overlayContainer.appendChild(dwiImageElement);
-                    overlayContainer.appendChild(adcImageElement);
-                    
-                    pairElement.appendChild(overlayContainer);
-                    pairElement.appendChild(controlsElement);
-                    
-                    imageContainer.appendChild(pairElement);
-                    
-                    // DWI 이미지 로드
-                    const dwiFileReader = new FileReader();
-                    dwiFileReader.onload = function(e) {
-                        dwiImageElement.src = e.target.result;
-                        
-                        // ADC 이미지 로드
-                        const adcFileReader = new FileReader();
-                        adcFileReader.onload = function(e) {
-                            adcImageElement.src = e.target.result;
-                            resolve();
-                        };
-                        adcFileReader.onerror = function() {
-                            console.error('ADC 이미지 로드 실패:', pair.adc.name);
-                            resolve();
-                        };
-                        adcFileReader.readAsDataURL(pair.adc);
-                    };
-                    dwiFileReader.onerror = function() {
-                        console.error('DWI 이미지 로드 실패:', pair.dwi.name);
-                        resolve();
-                    };
-                    dwiFileReader.readAsDataURL(pair.dwi);
-                });
-            }
+            const folderSelector = document.getElementById('folderSelector');
+            folderSelector.addEventListener('change', handleFolderSelection);
         });
+
+        // 전역 임계값 설정 함수
+        window.updateAllThresholds = function(threshold) {
+            const thresholdSliders = document.querySelectorAll('.threshold-slider');
+            const thresholdValue = document.getElementById('thresholdValue');
+            
+            thresholdValue.textContent = threshold;
+            
+            // 모든 임계값 슬라이더 업데이트
+            thresholdSliders.forEach((slider, index) => {
+                slider.value = threshold;
+                imageData[index].brightnessThreshold = parseInt(threshold);
+                
+                // 컨투어 다시 계산
+                if (imageData[index].dwiImage) {
+                    imageData[index].contours = detectBrightRegions(
+                        imageData[index].dwiImage, 
+                        imageData[index].brightnessThreshold
+                    );
+                    renderCanvas(index);
+                }
+            });
+        };
+        
+        // 전역 컨투어 토글 함수
+        window.toggleAllContours = function(show) {
+            const toggles = document.querySelectorAll('.contour-toggle');
+            
+            toggles.forEach((toggle, index) => {
+                toggle.checked = show;
+                imageData[index].showContour = show;
+                renderCanvas(index);
+            });
+        };
+        
+        // 모든 설정 초기화 함수
+        window.resetAllSettings = function() {
+            const opacitySliders = document.querySelectorAll('.opacity-slider');
+            const thresholdSliders = document.querySelectorAll('.threshold-slider');
+            const contourToggles = document.querySelectorAll('.contour-toggle');
+            const globalThreshold = document.getElementById('globalThreshold');
+            const globalContour = document.getElementById('globalContour');
+            
+            // 전역 설정 초기화
+            globalThreshold.value = '150';
+            globalContour.checked = true;
+            document.getElementById('thresholdValue').textContent = '150';
+            
+            // 모든 이미지 설정 초기화
+            imageData.forEach((data, index) => {
+                data.opacity = 0;
+                data.brightnessThreshold = 150;
+                data.showContour = true;
+                
+                // UI 업데이트
+                if (opacitySliders[index]) opacitySliders[index].value = '0';
+                if (thresholdSliders[index]) thresholdSliders[index].value = '150';
+                if (contourToggles[index]) contourToggles[index].checked = true;
+                
+                // 컨투어 다시 계산
+                if (data.dwiImage) {
+                    data.contours = detectBrightRegions(data.dwiImage, 150);
+                    renderCanvas(index);
+                }
+            });
+        };
+
+        // 폴더 선택 처리 함수
+        async function handleFolderSelection(event) {
+            showLoading();
+            
+            const files = Array.from(event.target.files);
+            
+            // ADC와 DWI 파일 필터링 및 정렬
+            dwImages = files.filter(file => file.name.startsWith('DWI') && file.name.toLowerCase().endsWith('.jpg'))
+                .sort((a, b) => {
+                    const numA = parseInt(a.name.replace(/\D/g, ''));
+                    const numB = parseInt(b.name.replace(/\D/g, ''));
+                    return numA - numB;
+                });
+                
+            adcImages = files.filter(file => file.name.startsWith('ADC') && file.name.toLowerCase().endsWith('.jpg'))
+                .sort((a, b) => {
+                    const numA = parseInt(a.name.replace(/\D/g, ''));
+                    const numB = parseInt(b.name.replace(/\D/g, ''));
+                    return numA - numB;
+                });
+
+            // 이미지 데이터 및 UI 초기화
+            imageData = [];
+            const imagesContainer = document.getElementById('imagesContainer');
+            const globalControls = document.getElementById('globalControls');
+            imagesContainer.innerHTML = '';
+            
+            if (dwImages.length === 0 || adcImages.length === 0) {
+                imagesContainer.innerHTML = '<div class="no-images">선택한 폴더에서 ADC와 DWI 이미지를 찾을 수 없습니다.</div>';
+                globalControls.style.display = 'none';
+                hideLoading();
+                return;
+            }
+            
+            // 이미지가 있으면 전역 컨트롤 표시
+            globalControls.style.display = 'block';
+            
+            // 초기 설정
+            const defaultSettings = {
+                brightnessThreshold: 150,
+                showContour: true
+            };
+            
+            // 각 DWI 이미지에 대해 처리
+            for (let i = 0; i < dwImages.length; i++) {
+                const dwiFile = dwImages[i];
+                
+                // 같은 번호의 ADC 파일 찾기
+                const dwiNumber = extractNumber(dwiFile.name);
+                const adcFile = adcImages.find(file => extractNumber(file.name) === dwiNumber);
+                
+                if (adcFile) {
+                    // 이미지 데이터 객체 생성
+                    imageData.push({
+                        dwiFile,
+                        adcFile,
+                        dwiNumber,
+                        opacity: 0, // 초기 ADC 불투명도
+                        showContour: defaultSettings.showContour,
+                        brightnessThreshold: defaultSettings.brightnessThreshold
+                    });
+                    
+                    // 이미지 카드 생성
+                    const card = createImageCard(imageData[imageData.length - 1], imageData.length - 1);
+                    imagesContainer.appendChild(card);
+                }
+            }
+            
+            // 이미지 로드 및 컨투어 계산
+            let loadedCount = 0;
+            const totalCount = imageData.length;
+            
+            // 각 이미지 쌍 처리
+            for (let i = 0; i < imageData.length; i++) {
+                try {
+                    await loadImages(imageData[i], i);
+                    loadedCount++;
+                    
+                    // 진행 상황 체크
+                    if (loadedCount === totalCount) {
+                        hideLoading();
+                    }
+                } catch (error) {
+                    console.error('이미지 로드 실패:', error);
+                    loadedCount++;
+                    
+                    if (loadedCount === totalCount) {
+                        hideLoading();
+                    }
+                }
+            }
+            
+            // 타임아웃 설정 (로딩이 너무 오래 걸릴 경우)
+            setTimeout(() => {
+                if (document.getElementById('loading').style.display !== 'none') {
+                    hideLoading();
+                }
+            }, 10000);
+        }
+        
+        // 파일 이름에서 숫자 추출 함수
+        function extractNumber(filename) {
+            const matches = filename.match(/\d+/);
+            return matches ? parseInt(matches[0]) : -1;
+        }
+        
+        // 이미지 카드 요소 생성 함수
+        function createImageCard(data, index) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            
+            const canvasContainer = document.createElement('div');
+            canvasContainer.className = 'canvas-container';
+            
+            const canvas = document.createElement('canvas');
+            canvas.id = `canvas-${index}`;
+            canvasContainer.appendChild(canvas);
+            
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = `#${data.dwiNumber.toString().padStart(4, '0')}`;
+            
+            const sliderContainer = document.createElement('div');
+            sliderContainer.className = 'slider-container';
+            
+            const sliderLabel = document.createElement('div');
+            sliderLabel.className = 'slider-label';
+            sliderLabel.innerHTML = '<span>DWI</span><span>ADC</span>';
+            
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '0';
+            slider.max = '100';
+            slider.value = '0';
+            slider.id = `opacity-slider-${index}`;
+            slider.className = 'opacity-slider';
+            
+            slider.addEventListener('input', function(e) {
+                // 슬라이더 값에 따라 이미지 불투명도 업데이트
+                const opacityValue = parseInt(e.target.value);
+                imageData[index].opacity = opacityValue;
+                renderCanvas(index);
+            });
+            
+            // 컨투어 컨트롤 추가
+            const contourControl = document.createElement('div');
+            contourControl.className = 'contour-control';
+            
+            // 컨투어 체크박스 컨테이너
+            const contourCheckboxContainer = document.createElement('div');
+            contourCheckboxContainer.style.display = 'flex';
+            contourCheckboxContainer.style.alignItems = 'center';
+            contourCheckboxContainer.style.marginBottom = '8px';
+            
+            // 컨투어 체크박스
+            const contourCheckbox = document.createElement('input');
+            contourCheckbox.type = 'checkbox';
+            contourCheckbox.id = `contour-toggle-${index}`;
+            contourCheckbox.className = 'contour-toggle';
+            contourCheckbox.checked = true;
+            
+            contourCheckbox.addEventListener('change', function(e) {
+                imageData[index].showContour = e.target.checked;
+                renderCanvas(index);
+            });
+            
+            const contourLabel = document.createElement('label');
+            contourLabel.htmlFor = `contour-toggle-${index}`;
+            contourLabel.textContent = '컨투어 표시';
+            contourLabel.style.fontSize = '12px';
+            contourLabel.style.marginLeft = '5px';
+            
+            contourCheckboxContainer.appendChild(contourCheckbox);
+            contourCheckboxContainer.appendChild(contourLabel);
+            
+            // 임계값 조절 슬라이더
+            const thresholdContainer = document.createElement('div');
+            thresholdContainer.style.marginBottom = '8px';
+            
+            const thresholdLabel = document.createElement('label');
+            thresholdLabel.htmlFor = `threshold-slider-${index}`;
+            thresholdLabel.textContent = '밝기 임계값:';
+            thresholdLabel.style.fontSize = '12px';
+            thresholdLabel.style.display = 'block';
+            thresholdLabel.style.marginBottom = '4px';
+            
+            const thresholdSlider = document.createElement('input');
+            thresholdSlider.type = 'range';
+            thresholdSlider.min = '50';
+            thresholdSlider.max = '240';
+            thresholdSlider.step = '1';
+            thresholdSlider.value = '150';
+            thresholdSlider.id = `threshold-slider-${index}`;
+            thresholdSlider.className = 'threshold-slider';
+            
+            thresholdSlider.addEventListener('input', function(e) {
+                const thresholdValue = parseInt(e.target.value);
+                imageData[index].brightnessThreshold = thresholdValue;
+                
+                // 임계값이 변경되면 컨투어를 다시 계산
+                if (imageData[index].dwiImage) {
+                    imageData[index].contours = detectBrightRegions(
+                        imageData[index].dwiImage, 
+                        imageData[index].brightnessThreshold
+                    );
+                    renderCanvas(index);
+                }
+            });
+            
+            thresholdContainer.appendChild(thresholdLabel);
+            thresholdContainer.appendChild(thresholdSlider);
+            
+            // 리셋 버튼 추가
+            const resetButton = document.createElement('button');
+            resetButton.className = 'reset-button';
+            resetButton.textContent = '설정 초기화';
+            resetButton.addEventListener('click', function() {
+                // 설정 초기화
+                imageData[index].opacity = 0;
+                imageData[index].showContour = true;
+                imageData[index].brightnessThreshold = 150;
+                
+                // UI 업데이트
+                slider.value = 0;
+                contourCheckbox.checked = true;
+                thresholdSlider.value = 150;
+                
+                // 컨투어 다시 계산
+                if (imageData[index].dwiImage) {
+                    imageData[index].contours = detectBrightRegions(imageData[index].dwiImage, 150);
+                    renderCanvas(index);
+                }
+            });
+            
+            // 각 요소 조립
+            contourControl.appendChild(contourCheckboxContainer);
+            contourControl.appendChild(thresholdContainer);
+            contourControl.appendChild(resetButton);
+            
+            sliderContainer.appendChild(sliderLabel);
+            sliderContainer.appendChild(slider);
+            sliderContainer.appendChild(contourControl);
+            
+            card.appendChild(canvasContainer);
+            card.appendChild(fileName);
+            card.appendChild(sliderContainer);
+            
+            return card;
+        }
+        
+        // 이미지 로딩 함수
+        async function loadImages(data, index) {
+            // DWI 이미지 로드
+            const dwiImage = await loadImage(data.dwiFile);
+            data.dwiImage = dwiImage;
+            
+            // ADC 이미지 로드
+            const adcImage = await loadImage(data.adcFile);
+            data.adcImage = adcImage;
+            
+            // DWI 이미지 컨투어 추출
+            data.contours = detectBrightRegions(dwiImage, data.brightnessThreshold);
+            
+            // 캔버스 렌더링
+            renderCanvas(index);
+        }
+        
+        // 이미지 파일을 HTML 이미지로 변환하는 함수
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        resolve(img);
+                    };
+                    img.onerror = function() {
+                        reject(new Error('이미지 로드 실패'));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    reject(new Error('파일 읽기 실패'));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // 밝은 영역 감지 및 컨투어 추출 함수
+        function detectBrightRegions(image, brightnessThreshold = 150) {
+            // 오프스크린 캔버스 생성
+            const canvas = document.createElement('canvas');
+            const width = image.width;
+            const height = image.height;
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // 이미지 그리기
+            ctx.drawImage(image, 0, 0);
+            
+            // 이미지 데이터 가져오기
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // 컨투어 데이터 초기화 (0: 어두운 영역, 1: 밝은 영역)
+            const contourData = new Uint8Array(width * height);
+            
+            // 그레이스케일로 변환하여 밝기 임계값 기준으로 이진화
+            let idx = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                // 그레이스케일 변환 (가중치 적용)
+                const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                // 임계값보다 밝은 픽셀을 1로 설정
+                contourData[idx++] = brightness > brightnessThreshold ? 1 : 0;
+            }
+            
+            // 경계선 좌표 추출
+            const contours = [];
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    
+                    // 현재 픽셀이 밝은 영역이고 주변에 어두운 픽셀이 있는 경우 경계선으로 간주
+                    if (contourData[idx] === 1) {
+                        const left = contourData[idx - 1];
+                        const right = contourData[idx + 1];
+                        const top = contourData[(y - 1) * width + x];
+                        const bottom = contourData[(y + 1) * width + x];
+                        
+                        if (left === 0 || right === 0 || top === 0 || bottom === 0) {
+                            contours.push({ x, y });
+                        }
+                    }
+                }
+            }
+            
+            return contours;
+        }
+        
+        // 캔버스 렌더링 함수
+        function renderCanvas(index) {
+            const data = imageData[index];
+            if (!data.dwiImage || !data.adcImage) return;
+            
+            const canvas = document.getElementById(`canvas-${index}`);
+            const ctx = canvas.getContext('2d');
+            
+            // 캔버스 크기 설정
+            canvas.width = data.dwiImage.width;
+            canvas.height = data.dwiImage.height;
+            
+            // DWI 이미지 그리기
+            ctx.drawImage(data.dwiImage, 0, 0);
+            
+            // ADC 이미지 오버레이 (불투명도 적용)
+            if (data.opacity > 0) {
+                ctx.globalAlpha = data.opacity / 100;
+                ctx.drawImage(data.adcImage, 0, 0);
+                ctx.globalAlpha = 1.0;
+            }
+            
+            // 컨투어 그리기 (체크박스가 선택된 경우에만)
+            if (data.showContour && data.contours && data.contours.length > 0) {
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 0.5;
+                ctx.setLineDash([3, 3]); // 점선 패턴 적용
+                
+                // 점들을 작은 원으로 그려서 더 보기 좋게 만듦
+                for (const point of data.contours) {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 0.6, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // 로딩 표시 함수
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
     </script>
 </body>
 </html>
