@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DWI - ADC Overlay 뷰어</title>
+    <title>의료 이미지 오버레이 뷰어</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 20px 20px 20px 20px;
             background-color: #f5f5f5;
+        }
+        .main-content {
+            padding-right: 280px; /* 전역 설정 패널 공간 확보 */
         }
         .header {
             text-align: center;
@@ -71,6 +74,26 @@
         }
         input[type="range"] {
             flex-grow: 1;
+            width: 100%;
+        }
+        .reset-button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #opacity-value {
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+            margin-left: 5px;
         }
         .no-images {
             text-align: center;
@@ -84,27 +107,97 @@
             margin-top: 100px;
             color: #666;
         }
+        .blend-mode-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .blend-mode-container label {
+            margin-right: 10px;
+            min-width: 120px;
+        }
+        select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .global-controls {
+            background-color: #e0e0e0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .global-controls h2 {
+            margin-top: 0;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .global-control-item {
+            display: block;
+            margin: 15px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>DWI - ADC Overlay 뷰어</h1>
+    <div class="main-content">
+        <div class="header">
+            <h1>의료 이미지 오버레이 뷰어</h1>
+        </div>
+        
+        <div class="folder-selector">
+            <label for="folder-input">이미지 폴더 선택: </label>
+            <input type="file" id="folder-input" webkitdirectory directory multiple>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            이미지를 로딩 중입니다...
+        </div>
+        
+        <div id="no-images" class="no-images" style="display: none;">
+            선택한 폴더에서 ADC 또는 DWI 이미지를 찾을 수 없습니다.
+        </div>
+        
+        <div id="image-container" class="image-container"></div>
     </div>
-    
-    <div class="folder-selector">
-        <label for="folder-input">이미지 폴더 선택: </label>
-        <input type="file" id="folder-input" webkitdirectory directory multiple>
+
+    <div class="global-controls" id="global-controls" style="display: none;">
+        <h2>전역 설정</h2>
+        <div class="global-control-item">
+            <label for="global-blend-mode">오버레이 방식: </label>
+            <select id="global-blend-mode" onchange="updateAllBlendModes(this.value)">
+                <option value="normal">Normal</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="color-dodge">Color Dodge</option>
+                <option value="color-burn">Color Burn</option>
+                <option value="hard-light">Hard Light</option>
+                <option value="soft-light">Soft Light</option>
+                <option value="difference">Difference</option>
+                <option value="exclusion">Exclusion</option>
+                <option value="hue">Hue</option>
+                <option value="saturation">Saturation</option>
+                <option value="color">Color</option>
+                <option value="luminosity">Luminosity</option>
+            </select>
+        </div>
+        <div class="global-control-item">
+            <label for="global-opacity">전체 투명도: </label>
+            <input type="range" id="global-opacity" min="0" max="1" step="0.01" value="0" oninput="updateAllOpacity(this.value)">
+            <span id="opacity-value">0%</span>
+        </div>
+        <div class="global-control-item">
+            <button onclick="resetAllSettings()" class="reset-button">설정 초기화</button>
+        </div>
     </div>
-    
-    <div id="loading" class="loading" style="display: none;">
-        이미지를 로딩 중입니다...
-    </div>
-    
-    <div id="no-images" class="no-images" style="display: none;">
-        선택한 폴더에서 ADC 또는 DWI 이미지를 찾을 수 없습니다.
-    </div>
-    
-    <div id="image-container" class="image-container"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -112,8 +205,72 @@
             const imageContainer = document.getElementById('image-container');
             const loadingElement = document.getElementById('loading');
             const noImagesElement = document.getElementById('no-images');
+            const globalControlsElement = document.getElementById('global-controls');
             
             folderInput.addEventListener('change', handleFolderSelect);
+            
+            // 모든 이미지 오버레이 방식 업데이트
+            window.updateAllBlendModes = function(blendMode) {
+                const adcImages = document.querySelectorAll('.adc-image');
+                const blendModeSelects = document.querySelectorAll('.blend-mode-select');
+                
+                adcImages.forEach(img => {
+                    img.style.mixBlendMode = blendMode;
+                });
+                
+                blendModeSelects.forEach(select => {
+                    select.value = blendMode;
+                });
+            };
+            
+            // 모든 이미지 투명도 업데이트
+            window.updateAllOpacity = function(opacity) {
+                const adcImages = document.querySelectorAll('.adc-image');
+                const opacitySliders = document.querySelectorAll('.opacity-slider');
+                const opacityValue = document.getElementById('opacity-value');
+                
+                adcImages.forEach(img => {
+                    img.style.opacity = opacity;
+                });
+                
+                opacitySliders.forEach(slider => {
+                    slider.value = opacity;
+                });
+                
+                // 퍼센트 표시 업데이트
+                opacityValue.textContent = Math.round(opacity * 100) + '%';
+            };
+            
+            // 모든 설정 초기화
+            window.resetAllSettings = function() {
+                const adcImages = document.querySelectorAll('.adc-image');
+                const opacitySliders = document.querySelectorAll('.opacity-slider');
+                const blendModeSelects = document.querySelectorAll('.blend-mode-select');
+                const globalOpacitySlider = document.getElementById('global-opacity');
+                const globalBlendMode = document.getElementById('global-blend-mode');
+                const opacityValue = document.getElementById('opacity-value');
+                
+                // 이미지 초기화
+                adcImages.forEach(img => {
+                    img.style.opacity = '0';
+                    img.style.mixBlendMode = 'normal';
+                });
+                
+                // 개별 슬라이더 초기화
+                opacitySliders.forEach(slider => {
+                    slider.value = '0';
+                });
+                
+                // 개별 블렌드 모드 초기화
+                blendModeSelects.forEach(select => {
+                    select.value = 'normal';
+                });
+                
+                // 전역 컨트롤 초기화
+                globalOpacitySlider.value = '0';
+                globalBlendMode.value = 'normal';
+                opacityValue.textContent = '0%';
+            };
             
             function handleFolderSelect(event) {
                 // 이전 이미지 지우기
@@ -122,6 +279,7 @@
                 // 로딩 표시 보이기
                 loadingElement.style.display = 'block';
                 noImagesElement.style.display = 'none';
+                globalControlsElement.style.display = 'none';
                 
                 const files = event.target.files;
                 
@@ -174,6 +332,11 @@
                 // 번호 순서대로 정렬
                 imagePairs.sort((a, b) => a.number - b.number);
                 
+                // 이미지 쌍이 있으면 전역 컨트롤 표시
+                if (imagePairs.length > 0) {
+                    globalControlsElement.style.display = 'block';
+                }
+                
                 // 화면에 이미지 쌍 표시
                 Promise.all(imagePairs.map(createImagePairElement))
                     .then(() => {
@@ -206,6 +369,7 @@
                     adcImageElement.className = 'adc-image';
                     adcImageElement.alt = `ADC ${pair.number}`;
                     adcImageElement.style.opacity = '0'; // 초기 opacity 0%로 설정 (DWI만 보임)
+                    adcImageElement.style.mixBlendMode = 'normal'; // 기본 블렌드 모드
                     
                     // 컨트롤 컨테이너
                     const controlsElement = document.createElement('div');
@@ -229,6 +393,7 @@
                     const slider = document.createElement('input');
                     slider.type = 'range';
                     slider.id = `opacity-slider-${pair.number}`;
+                    slider.className = 'opacity-slider';
                     slider.min = '0';
                     slider.max = '1';
                     slider.step = '0.01';
@@ -238,12 +403,61 @@
                         adcImageElement.style.opacity = this.value;
                     });
                     
+                    // 블렌드 모드 컨테이너
+                    const blendModeContainer = document.createElement('div');
+                    blendModeContainer.className = 'blend-mode-container';
+                    
+                    // 블렌드 모드 라벨
+                    const blendModeLabel = document.createElement('label');
+                    blendModeLabel.setAttribute('for', `blend-mode-${pair.number}`);
+                    blendModeLabel.textContent = '오버레이 방식:';
+                    
+                    // 블렌드 모드 선택 상자
+                    const blendModeSelect = document.createElement('select');
+                    blendModeSelect.id = `blend-mode-${pair.number}`;
+                    blendModeSelect.className = 'blend-mode-select';
+                    
+                    // 블렌드 모드 옵션들
+                    const blendModes = [
+                        { value: 'normal', text: 'Normal' },
+                        { value: 'multiply', text: 'Multiply' },
+                        { value: 'screen', text: 'Screen' },
+                        { value: 'overlay', text: 'Overlay' },
+                        { value: 'darken', text: 'Darken' },
+                        { value: 'lighten', text: 'Lighten' },
+                        { value: 'color-dodge', text: 'Color Dodge' },
+                        { value: 'color-burn', text: 'Color Burn' },
+                        { value: 'hard-light', text: 'Hard Light' },
+                        { value: 'soft-light', text: 'Soft Light' },
+                        { value: 'difference', text: 'Difference' },
+                        { value: 'exclusion', text: 'Exclusion' },
+                        { value: 'hue', text: 'Hue' },
+                        { value: 'saturation', text: 'Saturation' },
+                        { value: 'color', text: 'Color' },
+                        { value: 'luminosity', text: 'Luminosity' }
+                    ];
+                    
+                    blendModes.forEach(mode => {
+                        const option = document.createElement('option');
+                        option.value = mode.value;
+                        option.textContent = mode.text;
+                        blendModeSelect.appendChild(option);
+                    });
+                    
+                    blendModeSelect.addEventListener('change', function() {
+                        adcImageElement.style.mixBlendMode = this.value;
+                    });
+                    
                     // 요소들 조립
                     sliderContainer.appendChild(sliderLabel);
                     sliderContainer.appendChild(slider);
                     
+                    blendModeContainer.appendChild(blendModeLabel);
+                    blendModeContainer.appendChild(blendModeSelect);
+                    
                     controlsElement.appendChild(infoElement);
                     controlsElement.appendChild(sliderContainer);
+                    controlsElement.appendChild(blendModeContainer);
                     
                     overlayContainer.appendChild(dwiImageElement);
                     overlayContainer.appendChild(adcImageElement);
